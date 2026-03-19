@@ -993,4 +993,50 @@ TEST_CASE_FIXTURE(BuiltinsFixture, "invalid_alias_should_export_as_error_type")
     CHECK(toString(*fType) == "bad<number>");
 }
 
+TEST_CASE_FIXTURE(BuiltinsFixture, "typeof_require_propagates_exported_types")
+{
+    // Module A exports types (like Fusion's init.luau)
+    fileResolver.source["game/A"] = R"(
+        export type Point = {x: number, y: number}
+        export type Scope<T> = {T} & T
+
+        local A = {}
+        function A.new(): Scope<any>
+            return {} :: any
+        end
+        return A
+    )";
+
+    // Module B is a Wally-style redirect that uses typeof(require(...))
+    fileResolver.source["game/B"] = R"(
+        type Package = typeof(require(game.A))
+        return require(game.A) :: Package
+    )";
+
+    // Module C requires the redirect and uses the exported types
+    fileResolver.source["game/C"] = R"(
+        local B = require(game.B)
+        local x: B.Point
+        local y: B.Scope<any>
+    )";
+
+    CheckResult aResult = getFrontend().check("game/A");
+    LUAU_REQUIRE_NO_ERRORS(aResult);
+
+    CheckResult bResult = getFrontend().check("game/B");
+    LUAU_REQUIRE_NO_ERRORS(bResult);
+
+    CheckResult cResult = getFrontend().check("game/C");
+    LUAU_REQUIRE_NO_ERRORS(cResult);
+
+    ModulePtr c = getFrontend().moduleResolver.getModule("game/C");
+    REQUIRE(c != nullptr);
+
+    TypeId xType = requireType(c, "x");
+    REQUIRE_MESSAGE(bool(get<TableType>(xType)), "Expected table but got " << toString(xType));
+
+    TypeId yType = requireType(c, "y");
+    CHECK(toString(yType) == "any & {any}");
+}
+
 TEST_SUITE_END();
