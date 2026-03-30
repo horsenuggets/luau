@@ -213,9 +213,17 @@ declare table: {
 
 static constexpr const char* kBuiltinDefinitionDebugSrc = R"BUILTIN_SRC(
 
+export type CoverageEntry = {
+    Function: string,
+    LineDefined: number,
+    Depth: number,
+    Hits: {number},
+}
+
 declare debug: {
     info: ((thread: thread, level: number, options: string) -> ...any) & ((level: number, options: string) -> ...any) & (<A..., R1...>(func: (A...) -> R1..., options: string) -> ...any),
     traceback: ((message: string?, level: number?) -> string) & ((thread: thread, message: string?, level: number?) -> string),
+    getcoverage: <A..., R...>(fn: (A...) -> R...) -> {CoverageEntry},
 }
 
 )BUILTIN_SRC";
