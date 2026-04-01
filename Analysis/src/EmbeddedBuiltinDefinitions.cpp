@@ -223,7 +223,10 @@ export type CoverageEntry = {
 declare debug: {
     info: ((thread: thread, level: number, options: string) -> ...any) & ((level: number, options: string) -> ...any) & (<A..., R1...>(func: (A...) -> R1..., options: string) -> ...any),
     traceback: ((message: string?, level: number?) -> string) & ((thread: thread, message: string?, level: number?) -> string),
-    getcoverage: <A..., R...>(fn: (A...) -> R...) -> {CoverageEntry},
+    --- Returns code coverage data for a function or script. Each entry contains the function name, line defined, nesting depth, and per-line hit counts (-1 = non-executable, 0 = not hit, >0 = hit count). Coverage must be enabled in the runtime.
+    getcoverage: (<A..., R...>(fn: (A...) -> R...) -> {CoverageEntry}) & ((script: any) -> {CoverageEntry}),
+    --- Returns whether code coverage instrumentation is currently enabled. In Lune, coverage is enabled by default. Set LUNE_COVERAGE=0 to disable.
+    iscoverageenabled: () -> boolean,
 }
 
 )BUILTIN_SRC";
