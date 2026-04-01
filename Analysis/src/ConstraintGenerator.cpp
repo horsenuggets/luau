@@ -1263,25 +1263,6 @@ ControlFlow ConstraintGenerator::visit(const ScopePtr& scope, AstStatLocal* stat
             scope->importedTypeBindings[name] = module->exportedTypeBindings;
             scope->importedModules[name] = moduleInfo->name;
 
-            // Propagate transitively imported type bindings from the
-            // required module's root scope. This handles Wally-style
-            // redirect files where type aliases like
-            // typeof(require(X)) import types into the module scope
-            // but don't add them to exportedTypeBindings.
-            if (module->hasModuleScope())
-            {
-                ScopePtr moduleScope = module->getModuleScope();
-                for (const auto& [importName, importBindings] : moduleScope->importedTypeBindings)
-                {
-                    for (const auto& [typeName, typeFun] : importBindings)
-                    {
-                        // Only add if not already present from direct exports
-                        if (scope->importedTypeBindings[name].find(typeName) == scope->importedTypeBindings[name].end())
-                            scope->importedTypeBindings[name][typeName] = typeFun;
-                    }
-                }
-            }
-
             // Imported typeArguments of requires that transitively refer to current module have to be replaced with 'any'
             for (const auto& [location, path] : requireCycles)
             {
@@ -1860,9 +1841,9 @@ ControlFlow ConstraintGenerator::visit(const ScopePtr& scope, AstStatTypeAlias* 
 
     // When a type alias is defined as typeof(require(X)), propagate
     // the required module's exported type bindings into the current
-    // scope under the alias name. This enables Wally-style redirect
-    // files (type Package = typeof(require(X))) to transitively
-    // re-export types from the underlying module.
+    // scope. This enables Wally-style redirect files
+    // (type Package = typeof(require(X))) to transitively re-export
+    // types from the underlying module.
     if (auto tof = alias->type->as<AstTypeTypeof>())
     {
         if (auto call = tof->expr->as<AstExprCall>())
@@ -1876,6 +1857,16 @@ ControlFlow ConstraintGenerator::visit(const ScopePtr& scope, AstStatTypeAlias* 
                         const Name aliasName{alias->name.value};
                         scope->importedTypeBindings[aliasName] = requiredModule->exportedTypeBindings;
                         scope->importedModules[aliasName] = moduleInfo->name;
+
+                        // Also add to exportedTypeBindings so downstream
+                        // modules that require this one can access the
+                        // types through the normal export mechanism.
+                        for (const auto& [typeName, typeFun] : requiredModule->exportedTypeBindings)
+                        {
+                            if (scope->exportedTypeBindings.find(typeName) == scope->exportedTypeBindings.end())
+                                scope->exportedTypeBindings[typeName] = typeFun;
+                        }
+
                     }
                 }
             }
