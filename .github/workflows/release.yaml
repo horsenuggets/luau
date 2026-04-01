@@ -1,0 +1,125 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - release
+
+permissions:
+  contents: write
+
+jobs:
+  init:
+    name: Initialize release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version and changelog
+        id: version
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+          CHANGELOG=$(awk -v ver="\`$VERSION\`" '
+            /^## / {
+              if (found) exit
+              if ($2 == ver) found=1
+              next
+            }
+            found { print }
+          ' CHANGELOG.md | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | sed '/^$/N;/^\n$/d')
+
+          echo "$CHANGELOG" > /tmp/changelog.txt
+
+      - name: Upload changelog
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog
+          path: /tmp/changelog.txt
+
+  build:
+    name: Build ${{ matrix.artifact-name }}
+    needs: [init]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            artifact-name: luau-linux
+
+          - os: macos-latest
+            artifact-name: luau-macos
+
+          - os: windows-latest
+            artifact-name: luau-windows
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake . -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build . --target Luau.Repl.CLI Luau.Analyze.CLI Luau.Compile.CLI Luau.Ast.CLI --config Release -j 2
+
+      - name: Create release archive (Unix)
+        if: matrix.os != 'windows-latest'
+        run: zip ${{ matrix.artifact-name }}.zip luau luau-analyze luau-compile luau-ast
+
+      - name: Create release archive (Windows)
+        if: matrix.os == 'windows-latest'
+        run: 7z a ${{ matrix.artifact-name }}.zip .\Release\luau*.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.artifact-name }}.zip
+
+  release-github:
+    name: Create GitHub release
+    needs: [init, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          for dir in artifacts/luau-*; do
+            name=$(basename "$dir")
+            cp "$dir/$name.zip" "release-assets/$name.zip"
+          done
+
+      - name: Create git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ needs.init.outputs.tag }}
+          git push origin ${{ needs.init.outputs.tag }}
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create ${{ needs.init.outputs.tag }} \
+            --title "${{ needs.init.outputs.tag }}" \
+            --notes-file artifacts/changelog/changelog.txt \
+            release-assets/*
