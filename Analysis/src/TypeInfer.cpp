@@ -1607,6 +1607,37 @@ ControlFlow TypeChecker::check(const ScopePtr& scope, const AstStatTypeAlias& ty
     }
 
     bindingType = ty;
+
+    // When a type alias is defined as typeof(require(X)), propagate
+    // the required module's exported type bindings into the current
+    // scope. This enables Wally-style redirect files
+    // (type Package = typeof(require(X))) to transitively re-export
+    // types from the underlying module.
+    if (auto tof = typealias.type->as<AstTypeTypeof>())
+    {
+        if (auto call = tof->expr->as<AstExprCall>())
+        {
+            if (auto maybeRequire = matchRequire(*call))
+            {
+                if (auto moduleInfo = resolver->resolveModuleInfo(currentModule->name, **maybeRequire))
+                {
+                    if (ModulePtr requiredModule = resolver->getModule(moduleInfo->name))
+                    {
+                        const Name aliasName{typealias.name.value};
+                        scope->importedTypeBindings[aliasName] = requiredModule->exportedTypeBindings;
+                        scope->importedModules[aliasName] = moduleInfo->name;
+
+                        for (const auto& [typeName, typeFun] : requiredModule->exportedTypeBindings)
+                        {
+                            if (scope->exportedTypeBindings.find(typeName) == scope->exportedTypeBindings.end())
+                                scope->exportedTypeBindings[typeName] = typeFun;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     return ControlFlow::None;
 }
 
