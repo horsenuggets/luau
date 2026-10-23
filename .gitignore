@@ -26,5 +26,12 @@ __pycache__
 /.worktrees/
 /.wt/
 
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+tfplan
+
 # Project
 /TODO.md
