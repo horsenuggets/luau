@@ -21,3 +21,10 @@ __pycache__
 
 # Golden-test captured outputs for user debugging
 *.output.tmp
+
+# Worktrees
+/.worktrees/
+/.wt/
+
+# Project
+/TODO.md
