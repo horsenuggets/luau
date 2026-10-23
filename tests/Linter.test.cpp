@@ -646,6 +646,145 @@ return foo1
     REQUIRE(0 == result.warnings.size());
 }
 
+// The never-call check depends on the callee types each solver records, so run it under both
+static void lintUnderBothSolvers(const std::string& source, size_t expectedWarnings, int expectedLine = 0)
+{
+    for (bool forceOldSolver : {true, false})
+    {
+        CAPTURE(forceOldSolver);
+        ScopedFastFlag sff{FFlag::DebugLuauForceOldSolver, forceOldSolver};
+        Fixture fixture;
+
+        LintResult result = fixture.lint(source);
+
+        REQUIRE(expectedWarnings == result.warnings.size());
+
+        for (const LintWarning& warning : result.warnings)
+        {
+            CHECK_EQ(warning.code, LintWarning::Code_UnreachableCode);
+            CHECK_EQ(warning.location.begin.line, expectedLine);
+            CHECK_EQ(warning.text, "Unreachable code (previous statement always errors)");
+        }
+    }
+}
+
+TEST_CASE("UnreachableCodeAfterNeverCallLocal")
+{
+    lintUnderBothSolvers(
+        R"(
+local function die(): never
+    error("fatal")
+end
+
+local function test()
+    die()
+    print("unreachable")
+end
+
+return test
+)",
+        1,
+        7
+    );
+}
+
+TEST_CASE("UnreachableCodeAfterNeverCallTableFunction")
+{
+    lintUnderBothSolvers(
+        R"(
+local obj = {}
+
+function obj.die(): never
+    error("fatal")
+end
+
+local function test()
+    obj.die()
+    print("unreachable")
+end
+
+return test
+)",
+        1,
+        9
+    );
+}
+
+TEST_CASE("UnreachableCodeAfterNeverCallMethod")
+{
+    lintUnderBothSolvers(
+        R"(
+local obj = {}
+
+function obj:die(): never
+    error("fatal")
+end
+
+local function test()
+    obj:die()
+    print("unreachable")
+end
+
+return test
+)",
+        1,
+        9
+    );
+}
+
+TEST_CASE("UnreachableCodeAfterNumberCallIsReachable")
+{
+    lintUnderBothSolvers(
+        R"(
+local function get(): number
+    return 1
+end
+
+local function test()
+    get()
+    print("reachable")
+end
+
+return test
+)",
+        0
+    );
+}
+
+TEST_CASE("UnreachableCodeAfterNeverOrNumberCallIsReachable")
+{
+    lintUnderBothSolvers(
+        R"(
+local function maybe(): never | number
+    return 1
+end
+
+local function test()
+    maybe()
+    print("reachable")
+end
+
+return test
+)",
+        0
+    );
+}
+
+TEST_CASE("UnreachableCodeAfterUntypedCallIsReachable")
+{
+    lintUnderBothSolvers(
+        R"(
+local function test(callback)
+    callback()
+    print("reachable")
+end
+
+return test
+)",
+        0
+    );
+}
+
 TEST_CASE_FIXTURE(Fixture, "UnknownType")
 {
     unfreeze(getFrontend().globals.globalTypes);

@@ -1120,7 +1120,7 @@ private:
         else if (AstStatExpr* stat = node->as<AstStatExpr>())
         {
             if (AstExprCall* call = stat->expr->as<AstExprCall>())
-                if (doesCallError(call))
+                if (doesCallError(call) || doesCallReturnNever(call))
                     return Error;
 
             return Unknown;
@@ -1141,6 +1141,23 @@ private:
         {
             return Unknown;
         }
+    }
+
+    // A call never returns when the callee is a single function type whose return pack is
+    // exactly `never`. Anything else (unions, intersections, any, error types or missing
+    // type information) is conservatively treated as possibly returning.
+    bool doesCallReturnNever(AstExprCall* call)
+    {
+        std::optional<TypeId> calleeTy = context->getType(call->func);
+        if (!calleeTy)
+            return false;
+
+        const FunctionType* ftv = get<FunctionType>(follow(*calleeTy));
+        if (!ftv)
+            return false;
+
+        auto [head, tail] = flatten(ftv->retTypes);
+        return head.size() == 1 && !tail && get<NeverType>(follow(head[0]));
     }
 
     bool visit(AstExprFunction* node) override
