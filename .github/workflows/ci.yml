@@ -9,15 +9,11 @@ on:
       - "papers/**"
       - "rfcs/**"
       - "*.md"
+  # No path filter here, since every job is a required check and skipped jobs never report.
   pull_request:
     branches:
       - main
       - release
-    paths-ignore:
-      - "docs/**"
-      - "papers/**"
-      - "rfcs/**"
-      - "*.md"
 
 jobs:
   unix:
