@@ -84,7 +84,7 @@ resource "github_repository_ruleset" "main" {
     deletion         = true
 
     pull_request {
-      required_approving_review_count = 0
+      required_approving_review_count = 1
       dismiss_stale_reviews_on_push   = true
     }
 
@@ -125,7 +125,7 @@ resource "github_repository_ruleset" "release" {
     deletion         = true
 
     pull_request {
-      required_approving_review_count = 0
+      required_approving_review_count = 1
       dismiss_stale_reviews_on_push   = true
     }
 
