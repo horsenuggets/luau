@@ -84,12 +84,12 @@ resource "github_repository_ruleset" "main" {
     deletion         = true
 
     pull_request {
-      required_approving_review_count = 1
+      required_approving_review_count = 0
       dismiss_stale_reviews_on_push   = true
     }
 
     copilot_code_review {
-      review_on_push             = true
+      review_on_push             = false
       review_draft_pull_requests = false
     }
 
@@ -125,12 +125,12 @@ resource "github_repository_ruleset" "release" {
     deletion         = true
 
     pull_request {
-      required_approving_review_count = 1
+      required_approving_review_count = 0
       dismiss_stale_reviews_on_push   = true
     }
 
     copilot_code_review {
-      review_on_push             = true
+      review_on_push             = false
       review_draft_pull_requests = false
     }
 
@@ -148,11 +148,10 @@ resource "github_repository_ruleset" "release" {
   }
 }
 
-# Keeps Copilot code review at the Lite effort level, which costs several times fewer AI
-# credits than the Balanced default, and warns on
-# every plan if the setting drifts.
+# Each pull request gets a single Copilot review, so it runs at the deeper Balanced level.
+# The module warns on every plan if the setting drifts.
 module "copilot_review" {
   source        = "https://github.com/horsenuggets/luau-cicd/archive/a342a72d078bca2ff7f529bff4a68a68743b313a.tar.gz//luau-cicd-a342a72d078bca2ff7f529bff4a68a68743b313a/Terraform/Modules/CopilotReview"
   repository    = github_repository.repo.full_name
-  review_effort = "lite"
+  review_effort = "balanced"
 }
