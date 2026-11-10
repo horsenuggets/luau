@@ -5,7 +5,10 @@
 /cmake[.-]*/
 /coverage/
 /.vs/
-/.vscode/
+# Keep shared formatter settings, but ignore other local VS Code files.
+/.vscode/*
+!/.vscode/extensions.json
+!/.vscode/settings.json
 /fuzz/luau.pb.*
 /crash-*
 /default.prof*
