@@ -3,7 +3,7 @@ terraform {
 
     required_providers {
         github = {
-            source  = "integrations/github"
+            source = "integrations/github"
             version = "~> 6.0"
         }
     }
@@ -23,7 +23,7 @@ locals {
         "macos-arm",
         "ubuntu",
         "windows (Win32)",
-        "windows (x64)",
+        "windows (x64)"
     ]
 
     # ci.yml also runs on PRs to release, alongside .github/workflows/release-checks.yaml.
@@ -33,7 +33,7 @@ locals {
         "Build test - Windows",
         "Validate PR title",
         "Validate version",
-        "Verify diff matches main",
+        "Verify diff matches main"
     ])
 }
 
@@ -47,15 +47,15 @@ import {
 resource "github_repository" "repo" {
     name = local.repo_name
 
-    has_issues   = true
+    has_issues = true
     has_projects = false
-    has_wiki     = false
+    has_wiki = false
 
     allow_squash_merge = true
     allow_merge_commit = false
     allow_rebase_merge = false
 
-    squash_merge_commit_title   = "PR_TITLE"
+    squash_merge_commit_title = "PR_TITLE"
     squash_merge_commit_message = "PR_BODY"
 
     delete_branch_on_merge = true
@@ -67,9 +67,9 @@ resource "github_repository" "repo" {
 }
 
 resource "github_repository_ruleset" "main" {
-    name        = "main"
-    repository  = github_repository.repo.name
-    target      = "branch"
+    name = "main"
+    repository = github_repository.repo.name
+    target = "branch"
     enforcement = "active"
 
     conditions {
@@ -81,15 +81,15 @@ resource "github_repository_ruleset" "main" {
 
     rules {
         non_fast_forward = true
-        deletion         = true
+        deletion = true
 
         pull_request {
             required_approving_review_count = 0
-            dismiss_stale_reviews_on_push   = true
+            dismiss_stale_reviews_on_push = true
         }
 
         copilot_code_review {
-            review_on_push             = false
+            review_on_push = false
             review_draft_pull_requests = false
         }
 
@@ -99,7 +99,7 @@ resource "github_repository_ruleset" "main" {
             dynamic "required_check" {
                 for_each = local.main_checks
                 content {
-                    context        = required_check.value
+                    context = required_check.value
                     integration_id = 0
                 }
             }
@@ -108,9 +108,9 @@ resource "github_repository_ruleset" "main" {
 }
 
 resource "github_repository_ruleset" "release" {
-    name        = "release"
-    repository  = github_repository.repo.name
-    target      = "branch"
+    name = "release"
+    repository = github_repository.repo.name
+    target = "branch"
     enforcement = "active"
 
     conditions {
@@ -122,15 +122,15 @@ resource "github_repository_ruleset" "release" {
 
     rules {
         non_fast_forward = true
-        deletion         = true
+        deletion = true
 
         pull_request {
             required_approving_review_count = 0
-            dismiss_stale_reviews_on_push   = true
+            dismiss_stale_reviews_on_push = true
         }
 
         copilot_code_review {
-            review_on_push             = false
+            review_on_push = false
             review_draft_pull_requests = false
         }
 
@@ -140,7 +140,7 @@ resource "github_repository_ruleset" "release" {
             dynamic "required_check" {
                 for_each = local.release_checks
                 content {
-                    context        = required_check.value
+                    context = required_check.value
                     integration_id = 0
                 }
             }
@@ -151,7 +151,7 @@ resource "github_repository_ruleset" "release" {
 # Each pull request gets a single Copilot review, so it runs at the deeper Balanced level.
 # The module warns on every plan if the setting drifts.
 module "copilot_review" {
-    source        = "https://github.com/horsenuggets/luau-cicd/archive/a342a72d078bca2ff7f529bff4a68a68743b313a.tar.gz//luau-cicd-a342a72d078bca2ff7f529bff4a68a68743b313a/Terraform/Modules/CopilotReview"
-    repository    = github_repository.repo.full_name
+    source = "https://github.com/horsenuggets/luau-cicd/archive/a342a72d078bca2ff7f529bff4a68a68743b313a.tar.gz//luau-cicd-a342a72d078bca2ff7f529bff4a68a68743b313a/Terraform/Modules/CopilotReview"
+    repository = github_repository.repo.full_name
     review_effort = "balanced"
 }
