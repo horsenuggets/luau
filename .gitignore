@@ -31,7 +31,6 @@ __pycache__
 
 # Terraform
 .terraform/
-.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 tfplan
