@@ -23,7 +23,7 @@ locals {
         "macos-arm",
         "ubuntu",
         "windows (Win32)",
-        "windows (x64)",
+        "windows (x64)"
     ]
 
     # ci.yml also runs on PRs to release, alongside .github/workflows/release-checks.yaml.
@@ -33,7 +33,7 @@ locals {
         "Build test - Windows",
         "Validate PR title",
         "Validate version",
-        "Verify diff matches main",
+        "Verify diff matches main"
     ])
 }
 
