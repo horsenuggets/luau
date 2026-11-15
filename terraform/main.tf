@@ -1,5 +1,23 @@
+#
+# main.tf
+#
+# Manages this repository's GitHub settings, including merge options and the rulesets that
+# protect main and release with the required CI checks. Run plans and applies from this
+# folder with GITHUB_TOKEN set, for example...
+#
+#   GITHUB_TOKEN=$(gh auth token) terraform plan
+#
+
 terraform {
     required_version = ">= 1.5"
+
+    # State lives in HCP Terraform. The organization comes from the TF_CLOUD_ORGANIZATION
+    # environment variable, and plans run locally.
+    cloud {
+        workspaces {
+            name = "luau"
+        }
+    }
 
     required_providers {
         github = {
@@ -10,8 +28,8 @@ terraform {
 }
 
 provider "github" {
-    owner = "horsenuggets"
     # Authenticates via the GITHUB_TOKEN environment variable.
+    owner = "horsenuggets"
 }
 
 locals {
@@ -60,9 +78,12 @@ resource "github_repository" "repo" {
 
     delete_branch_on_merge = true
 
-    # Managed in the GitHub UI, so applies don't overwrite them.
     lifecycle {
-        ignore_changes = [description, has_downloads, homepage_url, topics, visibility]
+        # Destroying this resource would delete the repository on GitHub.
+        prevent_destroy = true
+
+        # Managed in the GitHub UI, so applies don't overwrite them.
+        ignore_changes = [allow_auto_merge, description, homepage_url, topics, visibility]
     }
 }
 
@@ -86,11 +107,6 @@ resource "github_repository_ruleset" "main" {
         pull_request {
             required_approving_review_count = 0
             dismiss_stale_reviews_on_push = true
-        }
-
-        copilot_code_review {
-            review_on_push = false
-            review_draft_pull_requests = false
         }
 
         required_status_checks {
@@ -129,11 +145,6 @@ resource "github_repository_ruleset" "release" {
             dismiss_stale_reviews_on_push = true
         }
 
-        copilot_code_review {
-            review_on_push = false
-            review_draft_pull_requests = false
-        }
-
         required_status_checks {
             strict_required_status_checks_policy = true
 
@@ -146,12 +157,4 @@ resource "github_repository_ruleset" "release" {
             }
         }
     }
-}
-
-# Each pull request gets a single Copilot review, so it runs at the deeper Balanced level.
-# The module warns on every plan if the setting drifts.
-module "copilot_review" {
-    source = "https://github.com/horsenuggets/luau-cicd/archive/a342a72d078bca2ff7f529bff4a68a68743b313a.tar.gz//luau-cicd-a342a72d078bca2ff7f529bff4a68a68743b313a/Terraform/Modules/CopilotReview"
-    repository = github_repository.repo.full_name
-    review_effort = "balanced"
 }
