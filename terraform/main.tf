@@ -116,7 +116,7 @@ resource "github_repository_ruleset" "main" {
                 for_each = local.main_checks
                 content {
                     context = required_check.value
-                    integration_id = 0
+                    integration_id = 15368
                 }
             }
         }
@@ -152,7 +152,7 @@ resource "github_repository_ruleset" "release" {
                 for_each = local.release_checks
                 content {
                     context = required_check.value
-                    integration_id = 0
+                    integration_id = 15368
                 }
             }
         }
