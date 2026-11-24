@@ -55,10 +55,9 @@ std::optional<TypeFunctionReductionResult<TypeId>> tryDistributeTypeFunctionApp(
     const UnionType* firstUnion = nullptr;
     size_t unionIndex = 0;
 
-    std::vector<TypeId> arguments = typeParams;
-    for (size_t i = 0; i < arguments.size(); ++i)
+    for (size_t i = 0; i < typeParams.size(); ++i)
     {
-        const UnionType* ut = get<UnionType>(follow(arguments[i]));
+        const UnionType* ut = get<UnionType>(follow(typeParams[i]));
         if (!ut)
             continue;
 
@@ -85,6 +84,7 @@ std::optional<TypeFunctionReductionResult<TypeId>> tryDistributeTypeFunctionApp(
         return std::nullopt;
     }
 
+    std::vector<TypeId> arguments = typeParams;
     for (TypeId option : firstUnion)
     {
         arguments[unionIndex] = option;

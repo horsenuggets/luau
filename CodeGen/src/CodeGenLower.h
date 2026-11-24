@@ -141,7 +141,7 @@ inline bool lowerImpl(
         if (options.includeIr)
         {
             if (options.includeIrPrefix == IncludeIrPrefix::Yes)
-                logger->formatAppend("# ");
+                Luau::formatAppend(ctx.result, "# ");
 
             toStringDetailed(ctx, block, blockIndex, options.includeUseInfo, options.includeCfgInfo, options.includeRegFlowInfo);
         }
@@ -171,9 +171,9 @@ inline bool lowerImpl(
             if (options.includeIr)
             {
                 if (options.includeIrPrefix == IncludeIrPrefix::Yes)
-                    logger->formatAppend("# ");
+                    Luau::formatAppend(ctx.result, "# ");
 
-                logger->formatAppend("  implicit CHECK_SAFE_ENV exit(%u)\n", block.startpc);
+                Luau::formatAppend(ctx.result, "  implicit CHECK_SAFE_ENV exit(%u)\n", block.startpc);
             }
 
             CODEGEN_ASSERT(block.startpc != kBlockNoStartPc);
@@ -198,7 +198,7 @@ inline bool lowerImpl(
                 {
                     toString(ctx.result, bcTypes, options.compilationOptions.userdataTypes);
 
-                    logger->formatAppend("\n");
+                    Luau::formatAppend(ctx.result, "\n");
                 }
             }
 
@@ -233,7 +233,7 @@ inline bool lowerImpl(
             if (options.includeIr)
             {
                 if (options.includeIrPrefix == IncludeIrPrefix::Yes)
-                    logger->formatAppend("# ");
+                    Luau::formatAppend(ctx.result, "# ");
 
                 toStringDetailed(ctx, block, blockIndex, inst, index, options.includeUseInfo);
             }
@@ -284,7 +284,7 @@ inline bool lowerImpl(
         }
 
         if (options.includeIr && options.includeIrPrefix == IncludeIrPrefix::Yes)
-            logger->formatAppend("#\n");
+            Luau::formatAppend(ctx.result, "#\n");
 
         if (block.expectedNextBlock == ~0u)
             function.validRestoreOpBlocks.clear();
@@ -303,7 +303,9 @@ inline bool lowerImpl(
         ctx.result.resize(textSize);
 
         if (options.includeAssembly)
-            logger->formatAppend("; skipping %u bytes of outlined code\n", unsigned((build.getCodeSize() - codeSize) * sizeof(build.code[0])));
+            Luau::formatAppend(
+                ctx.result, "; skipping %u bytes of outlined code\n", unsigned((build.getCodeSize() - codeSize) * sizeof(build.code[0]))
+            );
     }
 
     return true;
