@@ -554,17 +554,21 @@ static void getcoverage(Proto* p, int depth, int* buffer, size_t size, void* con
 {
     memset(buffer, -1, size * sizeof(int));
 
-    for (int i = 0; i < p->sizecode; ++i)
+    for (int i = 0; i < p->sizecode;)
     {
         Instruction insn = p->code[i];
-        if (LUAU_INSN_OP(insn) != LOP_COVERAGE)
-            continue;
+        LuauOpcode op = LuauOpcode(p->debuginsn ? p->debuginsn[i] : LUAU_INSN_OP(insn));
 
-        int line = luaG_getline(p, i);
-        int hits = LUAU_INSN_E(insn);
+        if (op == LOP_COVERAGE)
+        {
+            int line = luaG_getline(p, i);
+            int hits = LUAU_INSN_E(insn);
 
-        LUAU_ASSERT(size_t(line) < size);
-        buffer[line] = buffer[line] < hits ? hits : buffer[line];
+            LUAU_ASSERT(size_t(line) < size);
+            buffer[line] = buffer[line] < hits ? hits : buffer[line];
+        }
+
+        i += Luau::getOpLength(op);
     }
 
     const char* debugname = p->debugname ? getstr(p->debugname) : NULL;
