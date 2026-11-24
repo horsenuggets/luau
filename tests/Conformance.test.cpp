@@ -3570,6 +3570,102 @@ TEST_CASE("TagMethodError")
     }
 }
 
+TEST_CASE("CoverageInstructionBoundaries")
+{
+    struct Entry
+    {
+        std::string name;
+        int linedefined;
+        int depth;
+        std::vector<int> hits;
+    };
+
+    const int kFields = 700;
+    std::string source = "local function makeTable()\nreturn {\n";
+    for (int i = 1; i <= kFields; ++i)
+        source += "[\"Key" + std::to_string(i) + "\"] = true,\n";
+    source += "}\nend\nreturn makeTable\n";
+
+    for (int level : {1, 2})
+    {
+        for (int breakpoint : {0, 2, 327})
+        {
+            CAPTURE(level);
+            CAPTURE(breakpoint);
+            StateRef globalState(luaL_newstate(), lua_close);
+            lua_State* L = globalState.get();
+            lua_CompileOptions options = defaultOptions();
+            options.optimizationLevel = 1;
+            options.coverageLevel = level;
+
+            size_t bytecodeSize = 0;
+            char* bytecode = luau_compile(source.data(), source.size(), &options, &bytecodeSize);
+            int loaded = luau_load(L, "=CoverageInstructionBoundaries", bytecode, bytecodeSize, 0);
+            free(bytecode);
+            REQUIRE(loaded == 0);
+
+            auto capture = [&](int index)
+            {
+                std::vector<Entry> entries;
+                lua_getcoverage(
+                    L,
+                    index,
+                    &entries,
+                    [](void* context, const char* name, int linedefined, int depth, const int* hits, size_t size)
+                    {
+                        auto& result = *static_cast<std::vector<Entry>*>(context);
+                        result.push_back({name ? name : "", linedefined, depth, std::vector<int>(hits, hits + size)});
+                    }
+                );
+                return entries;
+            };
+
+            auto check = [&](const std::vector<Entry>& entries, int rootHits, int childHits)
+            {
+                REQUIRE(entries.size() == 2);
+                CHECK(entries[0].name.empty());
+                CHECK(entries[0].linedefined == 1);
+                CHECK(entries[0].depth == 0);
+                CHECK(entries[1].name == "makeTable");
+                CHECK(entries[1].linedefined == 1);
+                CHECK(entries[1].depth == 1);
+                REQUIRE(entries[0].hits.size() > size_t(kFields + 5));
+                REQUIRE(entries[1].hits.size() == entries[0].hits.size());
+
+                for (size_t line = 0; line < entries[0].hits.size(); ++line)
+                {
+                    CAPTURE(line);
+                    CHECK(entries[0].hits[line] == (line == 1 || line == size_t(kFields + 5) ? rootHits : -1));
+                    bool childExecutable = line == 2 || (level == 2 && line >= 3 && line <= size_t(kFields + 2));
+                    CHECK(entries[1].hits[line] == (childExecutable ? childHits : -1));
+                }
+            };
+
+            check(capture(-1), 0, 0);
+            if (breakpoint != 0)
+            {
+                REQUIRE(lua_breakpoint(L, -1, breakpoint, 1) > 0);
+                check(capture(-1), 0, 0);
+                REQUIRE(lua_breakpoint(L, -1, breakpoint, 0) > 0);
+                check(capture(-1), 0, 0);
+            }
+
+            lua_pushvalue(L, -1);
+            REQUIRE(lua_pcall(L, 0, 1, 0) == 0);
+            REQUIRE(lua_isLfunction(L, -1));
+            check(capture(-2), 1, 0);
+
+            lua_pushvalue(L, -1);
+            REQUIRE(lua_pcall(L, 0, 1, 0) == 0);
+            REQUIRE(lua_istable(L, -1));
+            lua_getfield(L, -1, "Key700");
+            CHECK(lua_toboolean(L, -1));
+            lua_pop(L, 2);
+            check(capture(-2), 1, 1);
+        }
+    }
+}
+
 TEST_CASE("Coverage")
 {
     lua_CompileOptions copts = defaultOptions();
