@@ -1,0 +1,5 @@
+[submodule "submodules/hcl4fmt"]
+	path = submodules/hcl4fmt
+	url = git@github.com:horsenuggets/hcl4fmt.git
+	# Cargo does not need formatter sources. Use --checkout for pinned developer setup.
+	update = none

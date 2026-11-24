@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## `0.742-horse.1.3`
+
+### Added
+
+- Added the Cargo-compatible `luau0-src` build interface over this repository's native
+  sources, with real `mlua` consumer tests for coverage, vectors, callbacks and codegen.
+
+### Fixed
+
+- Traverse actual bytecode instructions when collecting coverage so AUX operands cannot
+  become phantom executable lines or hit counts. Preserve coverage under breakpoints.
+- Avoid nullable codegen logging calls and unnecessary type-function argument copies
+  that prevented warning-clean optimized GCC builds.
+- Return a boolean from isocline's buffered input path to keep Windows CLI builds
+  warning-clean.
+- Match flags-enabled golden diagnostics to the existing terse type-function chunk names.
+- Exclude unrelated formatter submodules from Cargo's recursive Git fetch so native
+  source consumers do not need SSH credentials.
+
 ## `0.742-horse.1.2`
 
 ### Added
