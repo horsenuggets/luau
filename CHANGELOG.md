@@ -17,6 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   become phantom executable lines or hit counts. Preserve coverage under breakpoints.
 - Avoid nullable codegen logging calls and unnecessary type-function argument copies
   that prevented warning-clean optimized GCC builds.
+- Return a boolean from isocline's buffered input path to keep Windows CLI builds
+  warning-clean.
 - Match flags-enabled golden diagnostics to the existing terse type-function chunk names.
 
 ## `0.742-horse.1.2`
