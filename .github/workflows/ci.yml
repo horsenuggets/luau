@@ -29,6 +29,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          components: clippy, rustfmt
+
+      - name: Verify Cargo source interface
+        run: |
+          cargo fmt --all --check
+          cargo test --locked -p luau0-src
+          cargo clippy --locked --workspace --all-features --all-targets -- -D warnings
+          cargo test --locked -p luau-source-consumer
+          cargo test --locked -p luau-source-consumer --features codegen
+          cargo test --locked -p luau-source-consumer --features vector4
+          cargo test --locked -p luau-source-consumer --features codegen,vector4
+          cargo package --locked -p luau0-src
+          python3 Rust/VerifyBuild.py
+
+      - name: Verify Clang runtime selection
+        if: matrix.os.name == 'ubuntu'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y clang libc++-dev libc++abi-dev
+          python3 Rust/VerifyBuild.py --libcxx CXXFLAGS
+          python3 Rust/VerifyBuild.py --libcxx LUAU_CXXFLAGS
+
       - name: Work around ASLR+ASAN compatibility
         run: sudo sysctl -w vm.mmap_rnd_bits=28
         if: matrix.os.name == 'ubuntu'
@@ -62,10 +86,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [Win32, x64]
+        include:
+          - { arch: Win32, rust-target: i686-pc-windows-msvc }
+          - { arch: x64, rust-target: x86_64-pc-windows-msvc }
     name: windows (${{ matrix.arch }})
     steps:
       - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: ${{ matrix.rust-target }}
+
+      - name: Verify Cargo source interface
+        shell: bash
+        run: |
+          cargo test --locked -p luau0-src --target ${{ matrix.rust-target }}
+          cargo test --locked -p luau-source-consumer --target ${{ matrix.rust-target }}
+          cargo test --locked -p luau-source-consumer --target ${{ matrix.rust-target }} --features codegen
+          cargo test --locked -p luau-source-consumer --target ${{ matrix.rust-target }} --features vector4
+          cargo test --locked -p luau-source-consumer --target ${{ matrix.rust-target }} --features codegen,vector4
+          python Rust/VerifyBuild.py --target ${{ matrix.rust-target }}
 
       - name: CMake configure
         run: cmake . -A ${{ matrix.arch }} -DLUAU_WERROR=ON -DLUAU_NATIVE=ON

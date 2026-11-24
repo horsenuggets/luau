@@ -25,6 +25,9 @@ __pycache__
 # Golden-test captured outputs for user debugging
 *.output.tmp
 
+# Cargo build outputs
+/target/
+
 # Worktrees
 /.worktrees/
 /.wt/

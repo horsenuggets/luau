@@ -1,0 +1,13 @@
+[package]
+name = "luau-source-consumer"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.88"
+publish = false
+
+[features]
+codegen = ["mlua/luau-jit"]
+vector4 = ["mlua/luau-vector4"]
+
+[dependencies]
+mlua = { version = "=0.12.2", features = ["luau", "vendored"] }

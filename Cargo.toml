@@ -1,0 +1,44 @@
+[package]
+name = "luau0-src"
+version = "0.22.1+luau742"
+edition = "2024"
+rust-version = "1.88"
+description = "Reproducible Cargo builds of the maintained Luau source tree."
+license-file = "Rust/LICENSE"
+include = [
+    "/Ast/include/",
+    "/Ast/src/",
+    "/Bytecode/include/",
+    "/Bytecode/src/",
+    "/CodeGen/include/",
+    "/CodeGen/src/",
+    "/Common/include/",
+    "/Common/src/",
+    "/Compiler/include/",
+    "/Compiler/src/",
+    "/Config/include/",
+    "/Config/src/",
+    "/Custom/src/",
+    "/Inliner/include/",
+    "/Inliner/src/",
+    "/LICENSE.txt",
+    "/Require/include/",
+    "/Require/src/",
+    "/Rust/LICENSE",
+    "/Rust/src/",
+    "/VM/include/",
+    "/VM/src/",
+]
+
+[lib]
+path = "Rust/src/lib.rs"
+
+[dependencies]
+cc = { version = "1.11.3", features = ["parallel"] }
+
+[workspace]
+members = ["Rust/Consumer"]
+resolver = "3"
+
+[patch.crates-io]
+luau0-src = { path = "." }
