@@ -20,6 +20,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Return a boolean from isocline's buffered input path to keep Windows CLI builds
   warning-clean.
 - Match flags-enabled golden diagnostics to the existing terse type-function chunk names.
+- Exclude unrelated formatter submodules from Cargo's recursive Git fetch so native
+  source consumers do not need SSH credentials.
 
 ## `0.742-horse.1.2`
 

@@ -45,6 +45,10 @@ jobs:
           cargo package --locked -p luau0-src
           python3 Rust/VerifyBuild.py
 
+      - name: Verify credential-free Git source builds
+        if: matrix.os.name == 'ubuntu'
+        run: python3 Rust/VerifyBuild.py --git-source
+
       - name: Verify Clang runtime selection
         if: matrix.os.name == 'ubuntu'
         run: |

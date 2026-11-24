@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import tempfile
 
 
 def run_consumer(environment, target):
@@ -35,12 +36,57 @@ def run_consumer(environment, target):
     return artifact, build
 
 
+def verify_git_source(environment, target):
+    repository = Path(__file__).resolve().parents[1]
+    revision = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=repository, text=True,
+    ).strip()
+    url = repository.as_uri()
+    consumer = repository / "Rust" / "Consumer"
+    manifest = (consumer / "Cargo.toml").read_text()
+    manifest += (
+        "\n[lib]\npath = " + json.dumps(str(consumer / "src" / "lib.rs"))
+        + "\n\n[patch.crates-io]\nluau0-src = { git = " + json.dumps(url)
+        + ", rev = " + json.dumps(revision) + " }\n"
+    )
+    with tempfile.TemporaryDirectory(prefix="luau-git-consumer-") as directory:
+        project = Path(directory)
+        (project / "Cargo.toml").write_text(manifest)
+        environment = environment.copy()
+        environment["CARGO_HOME"] = str(project / "cargo-home")
+        environment["CARGO_TARGET_DIR"] = str(project / "target")
+        environment["GIT_TERMINAL_PROMPT"] = "0"
+        subprocess.run(
+            ["cargo", "generate-lockfile"], cwd=project, env=environment, check=True,
+        )
+        metadata = json.loads(subprocess.check_output(
+            ["cargo", "metadata", "--locked", "--format-version=1"],
+            cwd=project, env=environment, text=True,
+        ))
+        sources = [
+            package for package in metadata["packages"]
+            if package["name"] == "luau0-src"
+        ]
+        assert len(sources) == 1, "Expected exactly one native source package."
+        assert sources[0]["source"] == f"git+{url}?rev={revision}#{revision}"
+        command = ["cargo", "test", "--locked", "--features", "codegen"]
+        if target:
+            command.extend(["--target", target])
+        subprocess.run(command, cwd=project, env=environment, check=True)
+    print("Verified pinned Git source resolution and native consumer execution.")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--target")
-    parser.add_argument("--libcxx", choices=["CXXFLAGS", "LUAU_CXXFLAGS"])
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--libcxx", choices=["CXXFLAGS", "LUAU_CXXFLAGS"])
+    mode.add_argument("--git-source", action="store_true")
     options = parser.parse_args()
     environment = os.environ.copy()
+    if options.git_source:
+        verify_git_source(environment, options.target)
+        return
     if options.libcxx:
         environment["CXX"] = "clang++"
         environment[options.libcxx] = (
